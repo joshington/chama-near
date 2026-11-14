@@ -1,0 +1,25 @@
+{
+  "name": "chama-near",
+  "version": "0.1.0",
+  "description": "A savings group (chama) run by an AI treasurer, built for the NEAR Hackathon",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --import tsx --test test/*.test.ts",
+    "demo": "tsx src/demo.ts",
+    "demo:live": "node --env-file=.env --import tsx src/live-demo.ts",
+    "near:check": "node --env-file=.env --import tsx src/near/check.ts",
+    "near:keygen": "tsx src/near/keygen.ts",
+    "typecheck": "tsc --noEmit",
+    "start": "node --env-file-if-exists=.env --import tsx src/server.ts",
+    "near:from-seed": "tsx src/near/from-seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "near-api-js": "^7.3.1"
+  }
+}

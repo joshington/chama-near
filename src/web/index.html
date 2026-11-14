@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chama on NEAR</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d2320; --muted: #66706b; --line: #e3e1d9;
+    --accent: #0b7a5b; --accent-ink: #ffffff; --warn: #b45309; --warn-bg: #fef3c7;
+    --ok-bg: #d8f3e8; --ok: #0b6b50; --late-bg: #fee2e2; --late: #b91c1c; --idle-bg: #ecebe5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614; --card: #1b211e; --ink: #e8ece9; --muted: #98a39d; --line: #2c3530;
+      --accent: #3ecf9b; --accent-ink: #08241a; --warn: #f5b042; --warn-bg: #3a2c10;
+      --ok-bg: #12382c; --ok: #6ee7b7; --late-bg: #3f1b1b; --late: #fca5a5; --idle-bg: #262e2a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h2 { font-size: 1rem; margin: 28px 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .sub { color: var(--muted); margin: 0; }
+  .badge { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); vertical-align: middle; margin-left: 6px; }
+  .badge.live { background: var(--ok-bg); color: var(--ok); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 1.1rem; }
+  .stat span { color: var(--muted); font-size: .8rem; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 10px 14px; min-height: 44px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.small { min-height: 36px; padding: 6px 10px; font-size: .85rem; }
+  button:disabled { opacity: .5; cursor: wait; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .cycle { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .cycle.current { border-color: var(--accent); }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .head strong { font-size: 1rem; }
+  .chip { font-size: .75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--idle-bg); color: var(--muted); }
+  .chip.paid_out, .chip.funded { background: var(--ok-bg); color: var(--ok); }
+  .chip.late { background: var(--late-bg); color: var(--late); }
+  .chip.open { background: var(--warn-bg); color: var(--warn); }
+  .meta { color: var(--muted); font-size: .85rem; margin: 2px 0 8px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); gap: 8px; }
+  .who { overflow-wrap: anywhere; }
+  .paid { color: var(--ok); font-weight: 600; }
+  .payout { margin-top: 8px; padding: 10px; border-radius: 10px; background: var(--ok-bg); color: var(--ok); font-size: .9rem; overflow-wrap: anywhere; }
+  .payout a { color: inherit; font-weight: 700; }
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 6px; font-size: .9rem; overflow-wrap: anywhere; }
+  .log .d { color: var(--muted); font-size: .75rem; margin-right: 6px; }
+  .log li.member { border-left: 4px solid var(--accent); }
+  .log li.agent { border-left: 4px solid #6366f1; }
+  .log li.system { border-left: 4px solid var(--warn); }
+  .empty { color: var(--muted); }
+  #toast { position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 520px; margin: 0 auto; background: var(--late-bg); color: var(--late); padding: 12px 14px; border-radius: 10px; font-weight: 600; display: none; }
+  footer { margin-top: 28px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span id="name">Chama</span> <span id="mode" class="badge"></span></h1>
+  <p class="sub">A savings group run by an AI treasurer. Everyone pays each cycle, one member takes the pot, and the agent can only pay out within the rules.</p>
+
+  <div class="stats">
+    <div class="stat"><b id="day">-</b><span>Day</span></div>
+    <div class="stat"><b id="contribution">-</b><span>Each member pays</span></div>
+    <div class="stat"><b id="pot">-</b><span>Pot per cycle</span></div>
+    <div class="stat"><b id="reserve">-</b><span>Late-fee reserve</span></div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" data-days="1">Next day</button>
+    <button data-days="3">+3 days</button>
+    <button data-days="7">+7 days</button>
+    <button id="tick">Run agent now</button>
+    <button id="reset" hidden>Reset</button>
+  </div>
+
+  <h2>Cycles</h2>
+  <div id="cycles"></div>
+
+  <h2>Agent activity</h2>
+  <ul id="log" class="log"></ul>
+
+  <footer id="note"></footer>
+</main>
+<div id="toast" role="alert"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const STATUS = { paid_out: "Paid out", funded: "Funded", open: "Open", late: "Late", future: "Upcoming" };
+
+function el(tag, props, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") n.className = v;
+    else if (k === "onclick") n.addEventListener("click", v);
+    else n.setAttribute(k, v);
+  }
+  for (const k of kids) n.append(k);
+  return n;
+}
+
+let busy = false;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  setTimeout(() => (t.style.display = "none"), 4000);
+}
+
+async function call(path, body) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try {
+    const res = await fetch(path, body === undefined
+      ? undefined
+      : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    render(data);
+  } catch (e) {
+    toast(e.message || "Something went wrong");
+  } finally {
+    busy = false;
+    document.querySelectorAll("button").forEach((b) => (b.disabled = false));
+  }
+}
+
+function render(s) {
+  $("name").textContent = s.name;
+  const mode = $("mode");
+  mode.textContent = s.mode === "live" ? "LIVE TESTNET" : "SIMULATION";
+  mode.className = "badge" + (s.mode === "live" ? " live" : "");
+  $("day").textContent = s.day;
+  $("contribution").textContent = s.contribution;
+  $("pot").textContent = s.pot;
+  $("reserve").textContent = s.reserve;
+  $("reset").hidden = s.mode !== "sim";
+  $("note").textContent = s.mode === "live"
+    ? "Payouts are real transfers on NEAR testnet. Time is simulated; contributions are recorded here, not detected on-chain."
+    : "Simulation: no blockchain is involved. Set CHAMA_MODE=live to make payouts real on NEAR testnet.";
+
+  const cycles = $("cycles");
+  cycles.replaceChildren();
+  for (const c of s.cycles) {
+    const card = el("div", { class: "cycle" + (c.cycle === s.currentCycle ? " current" : "") });
+    card.append(
+      el("div", { class: "head" },
+        el("strong", {}, `Cycle ${c.cycle + 1}: ${c.recipient} receives`),
+        el("span", { class: "chip " + c.status }, STATUS[c.status])),
+      el("div", { class: "meta" }, `Contributions due by day ${c.dueDay}`),
+    );
+    for (const m of c.members) {
+      const right = m.paid
+        ? el("span", { class: "paid" }, "Paid ✓")
+        : c.status === "future" || c.status === "paid_out"
+          ? el("span", { class: "empty" }, "-")
+          : el("button", { class: "small", onclick: () => call("/api/contribute", { member: m.member, cycle: c.cycle }) }, "Mark as paid");
+      card.append(el("div", { class: "row" }, el("span", { class: "who" }, m.member), right));
+    }
+    if (c.payout) {
+      const p = el("div", { class: "payout" }, `Paid ${c.payout.amount} to ${c.recipient}. Transaction: `);
+      if (c.payout.url && c.payout.url.startsWith("https://")) {
+        p.append(el("a", { href: c.payout.url, target: "_blank", rel: "noopener noreferrer" }, c.payout.txId));
+      } else p.append(c.payout.txId);
+      card.append(p);
+    }
+    cycles.append(card);
+  }
+
+  const log = $("log");
+  log.replaceChildren();
+  if (!s.log.length) log.append(el("li", { class: "empty" }, "Nothing yet. Mark a member as paid, or move time forward."));
+  for (const e of s.log) log.append(el("li", { class: e.kind }, el("span", { class: "d" }, `Day ${e.day}`), e.text));
+}
+
+document.querySelectorAll("[data-days]").forEach((b) =>
+  b.addEventListener("click", () => call("/api/advance", { days: Number(b.dataset.days) })));
+$("tick").addEventListener("click", () => call("/api/tick", {}));
+$("reset").addEventListener("click", () => call("/api/reset", {}));
+call("/api/state");
+</script>
+</body>
+</html>

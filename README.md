@@ -8,8 +8,8 @@ Built for the [NEAR Hackathon](https://nearhackathon.com/). Tracks: **Social Mon
 
 | | |
 |---|---|
-| Demo video | `<ADD LINK>` |
-| Announcement on X | `<ADD LINK>` |
+| Demo video | `https://x.com/bosa_josh/status/2121604676579737905` |
+| Announcement on X | (https://x.com/bosa_josh/status/2121604676579737905)` |
 | Live payout on NEAR testnet | [View the transaction](https://testnet.nearblocks.io/txns/9rL2JExLNgiesyzYmLFZvUyc3aMYVMMsAgaSuSMELFhg): 0.4 NEAR, cycle 1 payout |
 | Treasury account (testnet) | `josh-chama.testnet` |
 
